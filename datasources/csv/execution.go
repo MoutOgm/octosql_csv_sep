@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/valyala/fastjson/fastfloat"
@@ -21,6 +22,7 @@ type DatasourceExecuting struct {
 	fileFieldNames []string
 	header         bool
 	separator      rune
+	decimal        rune
 }
 
 func (d *DatasourceExecuting) Run(ctx ExecutionContext, produce ProduceFn, metaSend MetaSendFn) error {
@@ -77,6 +79,9 @@ func (d *DatasourceExecuting) Run(ctx ExecutionContext, produce ProduceFn, metaS
 			}
 
 			if octosql.Float.Is(d.fields[i].Type) == octosql.TypeRelationIs {
+				if d.decimal != '.' {
+					str = strings.Replace(str, string(d.decimal), ".", 1)
+				}
 				float, err := fastfloat.Parse(str)
 				if err == nil {
 					values[i] = octosql.NewFloat(float)
