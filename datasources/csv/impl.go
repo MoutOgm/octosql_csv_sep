@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cube2222/octosql/execution"
@@ -14,7 +15,7 @@ import (
 	"github.com/cube2222/octosql/physical"
 )
 
-func Creator(separator rune) func(ctx context.Context, name string, options map[string]string) (physical.DatasourceImplementation, physical.Schema, error) {
+func Creator(separator rune, decimal rune) func(ctx context.Context, name string, options map[string]string) (physical.DatasourceImplementation, physical.Schema, error) {
 	return func(ctx context.Context, name string, options map[string]string) (physical.DatasourceImplementation, physical.Schema, error) {
 		f, err := files.OpenLocalFile(ctx, name, files.WithPreview())
 		if err != nil {
@@ -84,18 +85,33 @@ func Creator(separator rune) func(ctx context.Context, name string, options map[
 					}
 					continue
 				}
-
-				_, err = strconv.ParseFloat(str, 64)
-				if err == nil {
-					if !filled[i] {
-						fields[i] = octosql.Float
-						filled[i] = true
-					} else if fields[i].Equals(octosql.Int) {
-						fields[i] = octosql.Float
-					} else {
-						fields[i] = octosql.TypeSum(fields[i], octosql.Float)
+				if decimal != '.' {
+					var str_t string = strings.Replace(str, string(decimal), ".", 1)
+					_, err = strconv.ParseFloat(str_t, 64)
+					if err == nil {
+						if !filled[i] {
+							fields[i] = octosql.Float
+							filled[i] = true
+						} else if fields[i].Equals(octosql.Int) {
+							fields[i] = octosql.Float
+						} else {
+							fields[i] = octosql.TypeSum(fields[i], octosql.Float)
+						}
+						continue
 					}
-					continue
+				} else {
+					_, err = strconv.ParseFloat(str, 64)
+					if err == nil {
+						if !filled[i] {
+							fields[i] = octosql.Float
+							filled[i] = true
+						} else if fields[i].Equals(octosql.Int) {
+							fields[i] = octosql.Float
+						} else {
+							fields[i] = octosql.TypeSum(fields[i], octosql.Float)
+						}
+						continue
+					}
 				}
 
 				_, err = strconv.ParseBool(str)
@@ -141,6 +157,7 @@ func Creator(separator rune) func(ctx context.Context, name string, options map[
 				path:           name,
 				header:         header,
 				separator:      separator,
+				decimal:        decimal,
 				fileFieldNames: fieldNames,
 			},
 			physical.NewSchema(schemaFields, -1, physical.WithNoRetractions(true)),
@@ -152,6 +169,7 @@ type impl struct {
 	path           string
 	header         bool
 	separator      rune
+	decimal 	   rune
 	fileFieldNames []string
 }
 
@@ -161,6 +179,7 @@ func (i *impl) Materialize(ctx context.Context, env physical.Environment, schema
 		fields:         schema.Fields,
 		header:         i.header,
 		separator:      i.separator,
+		decimal:        i.decimal,
 		fileFieldNames: i.fileFieldNames,
 	}, nil
 }
