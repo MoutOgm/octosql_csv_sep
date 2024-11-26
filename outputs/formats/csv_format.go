@@ -41,7 +41,6 @@ func (t *CSVFormatter) Write(values []octosql.Value) error {
 	var builder strings.Builder
 	row := make([]string, len(values))
 	for i := range values {
-		fmt.Println("values[i].TypeID", values[i].TypeID)
 		if octosql.TypeIDFloat == values[i].TypeID && t.decimal != '.' {
 			builder.WriteString(strings.ReplaceAll(strconv.FormatFloat(values[i].Float, 'f', -1, 64), ".", string(t.decimal)))
 		} else {
