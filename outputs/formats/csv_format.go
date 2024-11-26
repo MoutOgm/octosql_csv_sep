@@ -14,14 +14,16 @@ import (
 
 type CSVFormatter struct {
 	writer *csv.Writer
+	decimal rune
 	fields []physical.SchemaField
 }
 
-func NewCSVFormatter(w io.Writer) *CSVFormatter {
+func NewCSVFormatter(w io.Writer, separator rune, decimale rune) *CSVFormatter {
 	writer := csv.NewWriter(w)
-
+	writer.Comma = separator
 	return &CSVFormatter{
 		writer: writer,
+		decimal: decimale,
 	}
 }
 
@@ -39,8 +41,14 @@ func (t *CSVFormatter) Write(values []octosql.Value) error {
 	var builder strings.Builder
 	row := make([]string, len(values))
 	for i := range values {
-		FormatCSVValue(&builder, values[i])
+		if octosql.Float.Is(t.fields[i].Type) == octosql.TypeRelationIs && t.decimal != '.' {
+			builder.WriteString(strings.ReplaceAll(strconv.FormatFloat(values[i].Float, 'f', -1, 64), ".", string(t.decimal)))
+		} else {
+			FormatCSVValue(&builder, values[i])
+		}
+
 		row[i] = builder.String()
+
 		builder.Reset()
 	}
 	return t.writer.Write(row)
