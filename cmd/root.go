@@ -190,11 +190,11 @@ octosql "SELECT * FROM plugins.plugins"`,
 			return fmt.Errorf("couldn't get file extension handlers: %w", err)
 		}
 		fileHandlers := map[string]func(ctx context.Context, name string, options map[string]string) (physical.DatasourceImplementation, physical.Schema, error){
-			"csv":     csv.Creator(';'),
+			"csv":     csv.Creator([]rune(separator)[0], []rune(decimal)[0]),
 			"json":    json.Creator,
 			"lines":   lines.Creator,
 			"parquet": parquet.Creator,
-			"tsv":     csv.Creator('\t'),
+			"tsv":     csv.Creator('\t', '.'),
 		}
 		for ext, pluginName := range fileExtensionHandlers {
 			fileHandlers[ext] = func(ctx context.Context, name string, options map[string]string) (physical.DatasourceImplementation, physical.Schema, error) {
@@ -425,7 +425,7 @@ octosql "SELECT * FROM plugins.plugins"`,
 			switch output {
 			case "csv":
 				formatter = func(writer io.Writer) eager.Format {
-					return formats.NewCSVFormatter(writer)
+					return formats.NewCSVFormatter(writer, []rune(separator)[0], []rune(decimal)[0])
 				}
 			case "json":
 				formatter = func(writer io.Writer) eager.Format {
@@ -476,6 +476,8 @@ var explain int
 var optimize bool
 var output string
 var prof string
+var separator string
+var decimal string
 
 func init() {
 	rootCmd.Flags().BoolVar(&describe, "describe", false, "Describe query output schema.")
@@ -483,6 +485,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&optimize, "optimize", true, "Whether OctoSQL should optimize the query.")
 	rootCmd.Flags().StringVarP(&output, "output", "o", "live_table", "Output format to use. Available options are live_table, batch_table, csv, json and stream_native.")
 	rootCmd.Flags().StringVar(&prof, "profile", "", "Enable profiling of the given type: cpu, memory, trace.")
+	rootCmd.Flags().StringVar(&separator, "separator", ",", "Separator to use for CSV files.")
+	rootCmd.Flags().StringVar(&decimal, "decimal", ".", "Decimal separator to use for CSV files.")
 }
 
 func typecheckNode(ctx context.Context, node logical.Node, env physical.Environment, logicalEnv logical.Environment) (_ physical.Node, _ map[string]string, outErr error) {
